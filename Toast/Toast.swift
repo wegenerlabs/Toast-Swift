@@ -250,11 +250,11 @@ public extension UIView {
     
      @param position The toast's position
      */
-    func makeToastActivity(_ position: ToastPosition) {
+    func makeToastActivity(_ position: ToastPosition, _ message: String? = nil) {
         // sanity
         guard objc_getAssociatedObject(self, &ToastKeys.activityView) as? UIView == nil else { return }
         
-        let toast = createToastActivityView()
+        let toast = createToastActivityView(message: message)
         let point = position.centerPoint(forToast: toast, inSuperview: self)
         makeToastActivity(toast, point: point)
     }
@@ -271,11 +271,11 @@ public extension UIView {
      
      @param point The toast's center point
      */
-    func makeToastActivity(_ point: CGPoint) {
+    func makeToastActivity(_ point: CGPoint, _ message: String? = nil) {
         // sanity
         guard objc_getAssociatedObject(self, &ToastKeys.activityView) as? UIView == nil else { return }
         
-        let toast = createToastActivityView()
+        let toast = createToastActivityView(message: message)
         makeToastActivity(toast, point: point)
     }
     
@@ -317,28 +317,64 @@ public extension UIView {
         })
     }
     
-    private func createToastActivityView() -> UIView {
+    private func createToastActivityView(message: String?) -> UIView {
         let style = ToastManager.shared.style
-        
-        let activityView = UIView(frame: CGRect(x: 0.0, y: 0.0, width: style.activitySize.width, height: style.activitySize.height))
-        activityView.backgroundColor = style.activityBackgroundColor
-        activityView.autoresizingMask = [.flexibleLeftMargin, .flexibleRightMargin, .flexibleTopMargin, .flexibleBottomMargin]
-        activityView.layer.cornerRadius = style.cornerRadius
-        
+
+        let containerView = UIView()
+        containerView.backgroundColor = style.activityBackgroundColor
+        containerView.layer.cornerRadius = style.cornerRadius
+
         if style.displayShadow {
-            activityView.layer.shadowColor = style.shadowColor.cgColor
-            activityView.layer.shadowOpacity = style.shadowOpacity
-            activityView.layer.shadowRadius = style.shadowRadius
-            activityView.layer.shadowOffset = style.shadowOffset
+            containerView.layer.shadowColor = style.shadowColor.cgColor
+            containerView.layer.shadowOpacity = style.shadowOpacity
+            containerView.layer.shadowRadius = style.shadowRadius
+            containerView.layer.shadowOffset = style.shadowOffset
         }
-        
-        let activityIndicatorView = UIActivityIndicatorView(style: .whiteLarge)
-        activityIndicatorView.center = CGPoint(x: activityView.bounds.size.width / 2.0, y: activityView.bounds.size.height / 2.0)
-        activityView.addSubview(activityIndicatorView)
-        activityIndicatorView.color = style.activityIndicatorColor
-        activityIndicatorView.startAnimating()
-        
-        return activityView
+
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.alignment = .center
+        stackView.spacing = style.activityViewSpacing
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+
+        let activityIndicator = UIActivityIndicatorView(style: .whiteLarge)
+        activityIndicator.color = style.activityIndicatorColor
+        activityIndicator.startAnimating()
+        stackView.addArrangedSubview(activityIndicator)
+
+        // Optional message label
+        let padding: CGFloat
+        if let message = message, !message.isEmpty {
+            let label = UILabel()
+            label.font = style.messageFont
+            label.textColor = style.messageColor
+            label.textAlignment = .center
+            label.numberOfLines = 0
+            label.text = message
+            stackView.addArrangedSubview(label)
+            padding = style.activityViewPaddingWithMessage
+        } else {
+            padding = style.activityViewPaddingNoMessage
+        }
+
+        containerView.addSubview(stackView)
+
+        NSLayoutConstraint.activate([
+            stackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding),
+            stackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -padding),
+            stackView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: padding),
+            stackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -padding),
+            stackView.widthAnchor.constraint(lessThanOrEqualToConstant: style.activityViewMaxWidth)
+        ])
+
+        // We need to set a frame to calculate a center point while the view is off-screen
+        let containerViewSize = containerView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        containerView.frame = CGRect(
+            origin: .zero,
+            size: containerViewSize
+        )
+
+        return containerView
     }
     
     // MARK: - Private Show/Hide Methods
@@ -681,13 +717,28 @@ public struct ToastStyle {
      The image size. The default is 80 x 80.
     */
     public var imageSize = CGSize(width: 80.0, height: 80.0)
-    
+
     /**
-     The size of the toast activity view when `makeToastActivity(position:)` is called.
-     Default is 100 x 100.
+     The maximum width of the toast when `makeToastActivity(position:message:)` is called with a message.
+     The view can further grow vertically vertically to fit the message.
     */
-    public var activitySize = CGSize(width: 100.0, height: 100.0)
-    
+    public var activityViewMaxWidth: CGFloat = 200.0
+
+    /**
+     The spacing between the spinner and the label when`makeToastActivity(position:message:)` is called with a message.
+    */
+    public var activityViewSpacing: CGFloat = 10.0
+
+    /**
+     The padding in the toast when `makeToastActivity(position:message:)` is called without a message.
+    */
+    public var activityViewPaddingNoMessage: CGFloat = 32.0
+
+    /**
+     The padding in the toast when `makeToastActivity(position:message:)` is called with a message.
+    */
+    public var activityViewPaddingWithMessage: CGFloat = 16.0
+
     /**
      The fade in/out animation duration. Default is 0.2.
      */

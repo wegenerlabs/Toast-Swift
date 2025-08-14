@@ -77,7 +77,7 @@ extension ViewController {
         if section == 0 {
             return 2
         } else {
-            return 11
+            return 12
         }
     }
     
@@ -146,9 +146,10 @@ extension ViewController {
             case 5: cell.textLabel?.text = "Make toast with a custom style"
             case 6: cell.textLabel?.text = "Show a custom view as toast"
             case 7: cell.textLabel?.text = "Show an image as toast at point\n(110, 110)"
-            case 8: cell.textLabel?.text = showingActivity ? "Hide toast activity" : "Show toast activity"
-            case 9: cell.textLabel?.text = "Hide toast"
-            case 10: cell.textLabel?.text = "Hide all toasts"
+            case 8: cell.textLabel?.text = showingActivity ? "Hide toast activity" : "Show toast activity (no message)"
+            case 9: cell.textLabel?.text = showingActivity ? "Hide toast activity" : "Show toast activity (with message)"
+            case 10: cell.textLabel?.text = "Hide toast"
+            case 11: cell.textLabel?.text = "Hide all toasts"
             default: cell.textLabel?.text = nil
             }
             
@@ -202,21 +203,19 @@ extension ViewController {
             // Show an image view as toast, on center at point (110,110)
             let toastView = UIImageView(image: UIImage(named: "toast.png"))
             self.navigationController?.view.showToast(toastView, duration: 2.0, point: CGPoint(x: 110.0, y: 110.0))
-        case 8:
-            // Make toast activity
+        case 8, 9:
+            let message = (indexPath.row == 9) ? "This is a toast activity with a custom message" : nil
             if !showingActivity {
-                self.navigationController?.view.makeToastActivity(.center)
+                navigationController?.view.makeToastActivity(.center, message)
             } else {
-                self.navigationController?.view.hideToastActivity()
+                navigationController?.view.hideToastActivity()
             }
-            
             showingActivity.toggle()
-            
             tableView.reloadData()
-        case 9:
+        case 10:
             // Hide toast
             self.navigationController?.view.hideToast()
-        case 10:
+        case 11:
             // Hide all toasts
             self.navigationController?.view.hideAllToasts()
         default:
